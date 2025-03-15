@@ -7,4 +7,4 @@ crop_width: 128    # Width of the missing region (defaults to width/2 if not spe
 corner_top: 64     # Top coordinate for the missing region (defaults to height//4)
 corner_left: 115   # Left coordinate for the missing region (defaults to int(0.45*width))
 channels: 3        # Number of image channels (1 for grayscale, 3 for RGB)
-device: cuda       # Device to run on (can be "cuda" or "cpu")
+
