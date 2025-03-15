@@ -2,7 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import yaml
 import argparse
-
+import skimage.restoration as sr
 from data import get_dataset, get_dataloader
 from guided_diffusion.unet import create_model
 from guided_diffusion.gaussian_diffusion import create_sampler
@@ -53,12 +53,12 @@ def main():
     num_test_images = len(dataset)
     dataloader = get_dataloader(dataset, batch_size=1, num_workers=0, train=False)
 
-    for img, N, sigma in dataloader:
+    for img in dataloader:
+        sigma=torch.tensor(sr.estimate_sigma(img, average_sigmas=True))
         X = img.to(device)
         sigma = sigma.to(device)
         Y = operator.forward(X) + sigma*torch.randn(X.shape).to(device)
-        gibbs = GibbsSampler(N=N, 
-                             Y=Y, 
+        gibbs = GibbsSampler(Y=Y, 
                              sigma=sigma, 
                              operator=operator, 
                              sampler=sampler, 
