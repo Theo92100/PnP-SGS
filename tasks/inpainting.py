@@ -216,7 +216,7 @@ class Inpainting(LinearOperator):
     #     # Return sample from the conditional distribution
     #     return mu_x + noise
     
-    def proximal_operator(self, x, y, sigma, rho):
+    def proximal_generator(self, x, y, sigma, rho):
         """
         Computes the proximal operator for the posterior distribution:
         
@@ -230,14 +230,14 @@ class Inpainting(LinearOperator):
         where self.mask plays the role of H (element-wise multiplication).
         
         Parameters:
-          x     : torch.Tensor, current estimate or "z" in the formulation (shape: (C, H, W))
-          y     : torch.Tensor, observed (partial) image (shape: (C, H, W))
-          sigma : float, noise standard deviation parameter
-          rho   : float, prior scale parameter
+        x     : torch.Tensor, current estimate or "z" in the formulation (shape: (C, H, W))
+        y     : torch.Tensor, observed (partial) image (shape: (C, H, W))
+        sigma : float, noise standard deviation parameter
+        rho   : float, prior scale parameter
         
         Returns:
-          mu_x  : torch.Tensor, the posterior mean (same shape as x)
-          Q_inv : torch.Tensor, the (diagonal) posterior covariance elements (same shape as x)
+        mu_x  : torch.Tensor, the posterior mean (same shape as x)
+        Q_inv : torch.Tensor, the (diagonal) posterior covariance elements (same shape as x)
         """
         # Compute the factor from the Sherman-Morrison-Woodbury formula
         factor = rho**2 / (sigma**2 + rho**2)
