@@ -239,7 +239,7 @@ class Inpainting(LinearOperator):
         """# You would need to implement this method
         # Calculate Q_x^(-1) using the Sherman-Morrison-Woodbury formula (equation 18)
         # Q_x^(-1) = rho^2 * (I_N - (rho^2 / (sigma^2 + rho^2)) * H^T * H)
-        HTH=self.mask.T@self.mask
+        HTH=self.mask.transpose(0,1) @ self.mask
         N = HTH.shape[0]
         factor = rho**2 / (sigma**2 + rho**2)
         Q_x_inv = rho**2 * (np.eye(N) - factor * HTH)
@@ -248,7 +248,7 @@ class Inpainting(LinearOperator):
         # Note: z seems to be a prior mean, which isn't clearly defined in the excerpt
         # For simplicity, assume z = 0 or replace with appropriate prior mean
         z = np.zeros(N)  # or self.prior_mean if available
-        term1 = (1/sigma**2) * self.mask.T @ y
+        term1 = (1/sigma**2) * self.mask.transpose(0,1) @ y
         term2 = (1/rho**2) * z
         mu_x = Q_x_inv @ (term1 + term2)
         sample = mu_x +torch.randn_like(x) * torch.sqrt(Q_x_inv)
