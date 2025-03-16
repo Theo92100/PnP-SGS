@@ -176,14 +176,14 @@ class Inpainting(LinearOperator):
         Applies the inpainting operator H to x by element-wise multiplication with the mask.
         For inpainting, H takes only observed pixels, so H(x) = mask * x
         """
-        return x * self.mask
+        return self.mask * x
     
     def transpose(self, y):
         """
         For the inpainting operator, the adjoint H^T is also multiplication by the mask.
         H^T takes measurements and places them at observed pixel locations.
         """
-        return y * self.mask
+        return self.mask * y
     
     # def proximal_generator(self, x, y, sigma, rho):
     #     """
