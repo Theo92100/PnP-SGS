@@ -148,7 +148,8 @@
 #         """
 #         x_init = y.clone()
 #         x_init[self.mask == 0] = 0.0
-#         return x_initimport torch
+#         return x_init
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
