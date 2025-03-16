@@ -185,36 +185,47 @@ class Inpainting(LinearOperator):
         """
         return y * self.mask
     
-    def proximal_generator(self, x, y, sigma, rho):
-        """
-        Implements exact perturbation-optimization (E-PO) algorithm for sampling from 
-        the Gaussian conditional distribution p(x|z,y;ρ²) = N(x; μ_x, Q_x^(-1))
+    # def proximal_generator(self, x, y, sigma, rho):
+    #     """
+    #     Implements exact perturbation-optimization (E-PO) algorithm for sampling from 
+    #     the Gaussian conditional distribution p(x|z,y;ρ²) = N(x; μ_x, Q_x^(-1))
         
-        Based on equation (17) and (18) from the paper:
-        Q_x = (1/σ²)H^T H + (1/ρ²)I_N
-        μ_x = Q_x^(-1) * ((1/σ²)H^T y + (1/ρ²)z)
+    #     Based on equation (17) and (18) from the paper:
+    #     Q_x = (1/σ²)H^T H + (1/ρ²)I_N
+    #     μ_x = Q_x^(-1) * ((1/σ²)H^T y + (1/ρ²)z)
         
-        Using Sherman-Morrison-Woodbury formula in equation (18):
-        Q_x^(-1) = ρ² * (I_N - (ρ²/(σ² + ρ²))H^T H)
+    #     Using Sherman-Morrison-Woodbury formula in equation (18):
+    #     Q_x^(-1) = ρ² * (I_N - (ρ²/(σ² + ρ²))H^T H)
         
-        For inpainting, H^T H is diagonal with entries equal to the mask.
-        """
-        # Calculate Q_x^(-1) using equation (18)
-        # For observed pixels (mask=1): ρ² * (1 - ρ²/(σ² + ρ²))
-        # For missing pixels (mask=0): ρ²
-        inv_Q_x = rho**2 * (1 - (rho**2 / (sigma**2 + rho**2)) * self.mask)
+    #     For inpainting, H^T H is diagonal with entries equal to the mask.
+    #     """
+    #     # Calculate Q_x^(-1) using equation (18)
+    #     # For observed pixels (mask=1): ρ² * (1 - ρ²/(σ² + ρ²))
+    #     # For missing pixels (mask=0): ρ²
+    #     inv_Q_x = rho**2 * (1 - (rho**2 / (sigma**2 + rho**2)) * self.mask)
         
-        # Calculate μ_x using equation (17)
-        # μ_x = Q_x^(-1) * ((1/σ²)H^T y + (1/ρ²)z)
-        # Where H^T y = mask * y and z = x (our input)
-        mu_x = inv_Q_x * ((1/sigma**2) * self.mask * y + (1/rho**2) * x)
+    #     # Calculate μ_x using equation (17)
+    #     # μ_x = Q_x^(-1) * ((1/σ²)H^T y + (1/ρ²)z)
+    #     # Where H^T y = mask * y and z = x (our input)
+    #     mu_x = inv_Q_x * ((1/sigma**2) * self.mask * y + (1/rho**2) * x)
         
-        # Sample from N(μ_x, Q_x^(-1))
-        # Draw random noise and scale by sqrt of variance
-        noise = torch.randn_like(x) * torch.sqrt(inv_Q_x)
+    #     # Sample from N(μ_x, Q_x^(-1))
+    #     # Draw random noise and scale by sqrt of variance
+    #     noise = torch.randn_like(x) * torch.sqrt(inv_Q_x)
         
-        # Return sample from the conditional distribution
-        return mu_x + noise
+    #     # Return sample from the conditional distribution
+    #     return mu_x + noise
+    
+    def proximal_generator(self,x,y,sigma,rho):
+        coeff=rho**2/(sigma**2+rho**2)
+        Q_x_inv_diag=torch.where(self.mask==1,rho**2-coeff,rho**2)
+        numerator=y/sigma**2*self.mask+x/rho**2
+        denominator=self.mask/sigma**2+1/rho**2
+        mu_x=numerator/denominator
+        epsilon=torch.randn_like(mu_x)
+        sample=mu_x+torch.sqrt(Q_x_inv_diag)*epsilon
+        return sample
+    
     
     def proximal_for_admm(self, x, y, rho):
         """
