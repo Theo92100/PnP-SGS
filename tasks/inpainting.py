@@ -216,44 +216,47 @@ class Inpainting(LinearOperator):
     #     # Return sample from the conditional distribution
     #     return mu_x + noise
     
-    def proximal_generator(self, x, y, sigma, rho):
+    def proximal_operator(self, x, y, sigma, rho):
         """
-        Sample from the conditional distribution p(x|y;rho^2) = N(x; mu_x, Q_x^(-1))
-        for image inpainting problems.
+        Computes the proximal operator for the posterior distribution:
+        
+            Q_x = (1/sigma^2)*H^T H + (1/rho^2)*I
+            mu_x = Q_x^{-1} * ( (1/sigma^2)*H^T y + (1/rho^2)*x )
+        
+        Using the Sherman-Morrison-Woodbury formula, we obtain:
+        
+            Q_x^{-1} = rho^2 * (I - (rho^2/(sigma^2+rho^2))*H^T H)
+        
+        where self.mask plays the role of H (element-wise multiplication).
         
         Parameters:
-        -----------
-        x : numpy.ndarray
-            Current state of the image
-        y : numpy.ndarray
-            Noisy and partial measurements
-        sigma : float
-            Standard deviation of the Gaussian noise
-        rho : float
-            Prior precision parameter
+          x     : torch.Tensor, current estimate or "z" in the formulation (shape: (C, H, W))
+          y     : torch.Tensor, observed (partial) image (shape: (C, H, W))
+          sigma : float, noise standard deviation parameter
+          rho   : float, prior scale parameter
         
         Returns:
-        --------
-        numpy.ndarray
-            Sampled image from the conditional distribution
-        """# You would need to implement this method
-        # Calculate Q_x^(-1) using the Sherman-Morrison-Woodbury formula (equation 18)
-        # Q_x^(-1) = rho^2 * (I_N - (rho^2 / (sigma^2 + rho^2)) * H^T * H)
-        HTH=self.mask.transpose(0,1) @ self.mask
-        N = HTH.shape[0]
+          mu_x  : torch.Tensor, the posterior mean (same shape as x)
+          Q_inv : torch.Tensor, the (diagonal) posterior covariance elements (same shape as x)
+        """
+        # Compute the factor from the Sherman-Morrison-Woodbury formula
         factor = rho**2 / (sigma**2 + rho**2)
-        Q_x_inv = rho**2 * (np.eye(N) - factor * HTH)
-        # Calculate mu_x (equation 17)
-        # mu_x = Q_x^(-1) * ((1/sigma^2) * H^T * y + (1/rho^2) * z)
-        # Note: z seems to be a prior mean, which isn't clearly defined in the excerpt
-        # For simplicity, assume z = 0 or replace with appropriate prior mean
-        z = np.zeros(N)  # or self.prior_mean if available
-        term1 = (1/sigma**2) * self.mask.transpose(0,1) @ y
-        term2 = (1/rho**2) * z
-        mu_x = Q_x_inv @ (term1 + term2)
-        sample = mu_x +torch.randn_like(x) * torch.sqrt(Q_x_inv)
+        
+        # Compute the diagonal of Q_x^{-1} using elementwise operations.
+        # For each pixel:
+        #   if mask==1 (observed): Q_inv = rho^2 * (1 - factor) = (rho^2 * sigma^2)/(sigma^2+rho^2)
+        #   if mask==0 (unobserved): Q_inv = rho^2
+        Q_inv = rho**2 * (torch.ones_like(self.mask) - factor * self.mask)
+        
+        # Compute the numerator: (1/sigma^2)*H^T y + (1/rho^2)*x.
+        # Since H is diagonal (and self.mask == H), we have:
+        numerator = (1/sigma**2) * (self.mask * y) + (1/rho**2) * x
+        
+        # The posterior mean is then computed elementwise:
+        mu_x = Q_inv * numerator
+        
+        sample = mu_x + torch.randn_like(x) * torch.sqrt(Q_inv)
         return sample
-    
     
     def proximal_for_admm(self, x, y, rho):
         """
