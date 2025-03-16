@@ -216,45 +216,43 @@ class Inpainting(LinearOperator):
     #     # Return sample from the conditional distribution
     #     return mu_x + noise
     
-def proximal_generator(self, x, y, sigma, rho):
-    """
-    Sample from the conditional distribution p(x|y;rho^2) = N(x; mu_x, Q_x^(-1))
-    for image inpainting problems.
-    
-    Parameters:
-    -----------
-    x : numpy.ndarray
-        Current state of the image
-    y : numpy.ndarray
-        Noisy and partial measurements
-    sigma : float
-        Standard deviation of the Gaussian noise
-    rho : float
-        Prior precision parameter
-    
-    Returns:
-    --------
-    numpy.ndarray
-        Sampled image from the conditional distribution
-    """# You would need to implement this method
-    
-    # Calculate Q_x^(-1) using the Sherman-Morrison-Woodbury formula (equation 18)
-    # Q_x^(-1) = rho^2 * (I_N - (rho^2 / (sigma^2 + rho^2)) * H^T * H)
-    HTH=self.mask.T@self.mask
-    N = HTH.shape[0]
-    factor = rho**2 / (sigma**2 + rho**2)
-    Q_x_inv = rho**2 * (np.eye(N) - factor * HTH)
-    # Calculate mu_x (equation 17)
-    # mu_x = Q_x^(-1) * ((1/sigma^2) * H^T * y + (1/rho^2) * z)
-    # Note: z seems to be a prior mean, which isn't clearly defined in the excerpt
-    # For simplicity, assume z = 0 or replace with appropriate prior mean
-    z = np.zeros(N)  # or self.prior_mean if available
-    term1 = (1/sigma**2) * self.mask.T @ y
-    term2 = (1/rho**2) * z
-    mu_x = Q_x_inv @ (term1 + term2)
-    sample = mu_x +torch.randn_like(x) * torch.sqrt(Q_x_inv)
-
-    return sample
+    def proximal_generator(self, x, y, sigma, rho):
+        """
+        Sample from the conditional distribution p(x|y;rho^2) = N(x; mu_x, Q_x^(-1))
+        for image inpainting problems.
+        
+        Parameters:
+        -----------
+        x : numpy.ndarray
+            Current state of the image
+        y : numpy.ndarray
+            Noisy and partial measurements
+        sigma : float
+            Standard deviation of the Gaussian noise
+        rho : float
+            Prior precision parameter
+        
+        Returns:
+        --------
+        numpy.ndarray
+            Sampled image from the conditional distribution
+        """# You would need to implement this method
+        # Calculate Q_x^(-1) using the Sherman-Morrison-Woodbury formula (equation 18)
+        # Q_x^(-1) = rho^2 * (I_N - (rho^2 / (sigma^2 + rho^2)) * H^T * H)
+        HTH=self.mask.T@self.mask
+        N = HTH.shape[0]
+        factor = rho**2 / (sigma**2 + rho**2)
+        Q_x_inv = rho**2 * (np.eye(N) - factor * HTH)
+        # Calculate mu_x (equation 17)
+        # mu_x = Q_x^(-1) * ((1/sigma^2) * H^T * y + (1/rho^2) * z)
+        # Note: z seems to be a prior mean, which isn't clearly defined in the excerpt
+        # For simplicity, assume z = 0 or replace with appropriate prior mean
+        z = np.zeros(N)  # or self.prior_mean if available
+        term1 = (1/sigma**2) * self.mask.T @ y
+        term2 = (1/rho**2) * z
+        mu_x = Q_x_inv @ (term1 + term2)
+        sample = mu_x +torch.randn_like(x) * torch.sqrt(Q_x_inv)
+        return sample
     
     
     def proximal_for_admm(self, x, y, rho):
