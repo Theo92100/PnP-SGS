@@ -218,45 +218,21 @@ class Inpainting(LinearOperator):
     
     def proximal_generator(self, x, y, sigma, rho):
         """
-        Computes the proximal operator for the posterior distribution:
+        Implements a proximal generator that samples from the Gaussian conditional distribution
+        using the fact that H is a binary (diagonal) operator.
         
-            Q_x = (1/sigma^2)*H^T H + (1/rho^2)*I
-            mu_x = Q_x^{-1} * ( (1/sigma^2)*H^T y + (1/rho^2)*x )
+        For each pixel i, the update is:
         
-        Using the Sherman-Morrison-Woodbury formula, we obtain:
+            x_i = (mask_i * y_i/sigma^2 + x_i/rho^2) / (mask_i/sigma^2 + 1/rho^2) + noise_i
         
-            Q_x^{-1} = rho^2 * (I - (rho^2/(sigma^2+rho^2))*H^T H)
-        
-        where self.mask plays the role of H (element-wise multiplication).
-        
-        Parameters:
-        x     : torch.Tensor, current estimate or "z" in the formulation (shape: (C, H, W))
-        y     : torch.Tensor, observed (partial) image (shape: (C, H, W))
-        sigma : float, noise standard deviation parameter
-        rho   : float, prior scale parameter
-        
-        Returns:
-        mu_x  : torch.Tensor, the posterior mean (same shape as x)
-        Q_inv : torch.Tensor, the (diagonal) posterior covariance elements (same shape as x)
+        where noise_i ~ N(0, 1/(mask_i/sigma^2 + 1/rho^2)).
         """
-        # Compute the factor from the Sherman-Morrison-Woodbury formula
-        factor = rho**2 / (sigma**2 + rho**2)
-        
-        # Compute the diagonal of Q_x^{-1} using elementwise operations.
-        # For each pixel:
-        #   if mask==1 (observed): Q_inv = rho^2 * (1 - factor) = (rho^2 * sigma^2)/(sigma^2+rho^2)
-        #   if mask==0 (unobserved): Q_inv = rho^2
-        Q_inv = rho**2 * (torch.ones_like(self.mask) - factor * self.mask)
-        
-        # Compute the numerator: (1/sigma^2)*H^T y + (1/rho^2)*x.
-        # Since H is diagonal (and self.mask == H), we have:
-        numerator = (1/sigma**2) * (self.mask * y) + (1/rho**2) * x
-        
-        # The posterior mean is then computed elementwise:
-        mu_x = Q_inv * numerator
-        
-        sample = mu_x + torch.randn_like(x) * torch.sqrt(Q_inv)
-        return sample
+        # Compute the inverse variance elementwise: 
+        # 1 / (mask/sigma^2 + 1/rho^2)
+        inv_var = 1 / (self.mask / (sigma**2) + 1 / (rho**2))
+        noise = torch.sqrt(inv_var) * torch.randn_like(x)
+        mu_x = inv_var * (self.mask * y / (sigma**2) + x / (rho**2))
+        return mu_x + noise
     
     def proximal_for_admm(self, x, y, rho):
         """
