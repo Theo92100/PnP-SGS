@@ -52,7 +52,9 @@ class Inpainting(LinearOperator):
         identity = identity.repeat(3, 1, 1).to(self.device)
         quantity= rho**2/(sigma**2+rho**2) 
         inv_var = rho**2(identity-2*quantity*self.mask)
-        #inv_var = 1 / (2*self.mask / (sigma**2) + 1 / (rho**2))
+        print(inv_var.shape)
+        inv_var1 = 1 / (2*self.mask / (sigma**2) + 1 / (rho**2))
+        print(inv_var1.shape)
         noise = torch.sqrt(inv_var) * torch.randn_like(x)
         mu_x = inv_var * (self.mask * y / (sigma**2) + x / (rho**2))
         return mu_x + noise
