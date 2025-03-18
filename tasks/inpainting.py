@@ -48,8 +48,10 @@ class Inpainting(LinearOperator):
         # Compute the inverse variance elementwise: 
         # 1 / (mask/sigma^2 + 1/rho^2)
         #do the same but with sherman morrison to see
+        identity = torch.eye(256).unsqueeze(0)
+        identity = identity.repeat(3, 1, 1)
         quantity= rho**2/(sigma**2+rho**2) 
-        inv_var = rho**2(torch.eye(self.mask.shape)-2*quantity*self.mask)
+        inv_var = rho**2(identity-2*quantity*self.mask)
         #inv_var = 1 / (2*self.mask / (sigma**2) + 1 / (rho**2))
         noise = torch.sqrt(inv_var) * torch.randn_like(x)
         mu_x = inv_var * (self.mask * y / (sigma**2) + x / (rho**2))
