@@ -46,7 +46,7 @@ class Inpainting(LinearOperator):
         where noise_i ~ N(0, 1/(mask_i/sigma^2 + 1/rho^2)).
         """
       
-        inv_var = 1 / (2*self.mask / (sigma**2) + 1 / (rho**2))
+        inv_var = 1 / (64*self.mask / (sigma**2) + 1 / (rho**2))
         noise = torch.sqrt(inv_var) * torch.randn_like(x)
         mu_x = inv_var * (self.mask * y / (sigma**2) + x / (rho**2))
         return mu_x + noise
